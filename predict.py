@@ -12,7 +12,8 @@ import tempfile
 import time
 import torch
 
-compute_type = "float16"  # change to "int8" if low on GPU mem (may reduce accuracy)
+# change to "int8" if low on GPU mem (may reduce accuracy)
+compute_type = "float16"
 device = "cuda"
 whisper_arch = "./models/faster-whisper-large-v3"
 
@@ -113,7 +114,8 @@ class Predictor(BasePredictor):
                 segments_starts = distribute_segments_equally(audio_duration, segments_duration_ms,
                                                               language_detection_max_tries)
 
-                print("Detecting languages on segments starting at " + ', '.join(map(str, segments_starts)))
+                print("Detecting languages on segments starting at " +
+                      ', '.join(map(str, segments_starts)))
 
                 detected_language_details = detect_language(audio_file, segments_starts, language_detection_min_prob,
                                                             language_detection_max_tries, asr_options, vad_options)
@@ -161,13 +163,16 @@ class Predictor(BasePredictor):
                 if detected_language in whisperx.alignment.DEFAULT_ALIGN_MODELS_TORCH or detected_language in whisperx.alignment.DEFAULT_ALIGN_MODELS_HF:
                     result = align(audio, result, debug)
                 else:
-                    print(f"Cannot align output as language {detected_language} is not supported for alignment")
+                    print(
+                        f"Cannot align output as language {detected_language} is not supported for alignment")
 
             if diarization:
-                result = diarize(audio, result, debug, huggingface_access_token, min_speakers, max_speakers)
+                result = diarize(
+                    audio, result, debug, huggingface_access_token, min_speakers, max_speakers)
 
             if debug:
-                print(f"max gpu memory allocated over runtime: {torch.cuda.max_memory_reserved() / (1024 ** 3):.2f} GB")
+                print(
+                    f"max gpu memory allocated over runtime: {torch.cuda.max_memory_reserved() / (1024 ** 3):.2f} GB")
 
         return Output(
             segments=result["segments"],
@@ -186,7 +191,8 @@ def detect_language(full_audio_file_path, segments_starts, language_detection_mi
 
     start_ms = segments_starts[iteration - 1]
 
-    audio_segment_file_path = extract_audio_segment(full_audio_file_path, start_ms, 30000)
+    audio_segment_file_path = extract_audio_segment(
+        full_audio_file_path, start_ms, 30000)
 
     audio = whisperx.load_audio(audio_segment_file_path)
 
@@ -199,7 +205,8 @@ def detect_language(full_audio_file_path, segments_starts, language_detection_mi
     language_token, language_probability = results[0][0]
     language = language_token[2:-2]
 
-    print(f"Iteration {iteration} - Detected language: {language} ({language_probability:.2f})")
+    print(
+        f"Iteration {iteration} - Detected language: {language} ({language_probability:.2f})")
 
     audio_segment_file_path.unlink()
 
@@ -227,7 +234,8 @@ def detect_language(full_audio_file_path, segments_starts, language_detection_mi
 
 
 def extract_audio_segment(input_file_path, start_time_ms, duration_ms):
-    input_file_path = Path(input_file_path) if not isinstance(input_file_path, Path) else input_file_path
+    input_file_path = Path(input_file_path) if not isinstance(
+        input_file_path, Path) else input_file_path
 
     audio = AudioSegment.from_file(input_file_path)
 
@@ -238,7 +246,8 @@ def extract_audio_segment(input_file_path, start_time_ms, duration_ms):
 
     with tempfile.NamedTemporaryFile(delete=False, suffix=file_extension) as temp_file:
         temp_file_path = Path(temp_file.name)
-        extracted_segment.export(temp_file_path, format=file_extension.lstrip('.'))
+        extracted_segment.export(
+            temp_file_path, format=file_extension.lstrip('.'))
 
     return temp_file_path
 
@@ -262,7 +271,8 @@ def distribute_segments_equally(total_duration, segments_duration, iterations):
 def align(audio, result, debug):
     start_time = time.time_ns() / 1e6
 
-    model_a, metadata = whisperx.load_align_model(language_code=result["language"], device=device)
+    model_a, metadata = whisperx.load_align_model(
+        language_code=result["language"], device=device)
     result = whisperx.align(result["segments"], model_a, metadata, audio, device,
                             return_char_alignments=False)
 
@@ -282,7 +292,8 @@ def diarize(audio, result, debug, huggingface_access_token, min_speakers, max_sp
 
     diarize_model = whisperx.DiarizationPipeline(model_name='pyannote/speaker-diarization@2.1',
                                                  use_auth_token=huggingface_access_token, device=device)
-    diarize_segments = diarize_model(audio, min_speakers=min_speakers, max_speakers=max_speakers)
+    diarize_segments = diarize_model(
+        audio, min_speakers=min_speakers, max_speakers=max_speakers)
 
     result = whisperx.assign_word_speakers(diarize_segments, result)
 
